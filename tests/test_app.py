@@ -3,12 +3,14 @@ from __future__ import annotations
 import base64
 import io
 import json
+import logging
 import os
 import re
 import shutil
 import sys
 import tempfile
 import unittest
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -130,6 +132,14 @@ class CuotibuSmokeTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        with app_module.app.app_context():
+            db.session.remove()
+            db.engine.dispose()
+        root_logger = logging.getLogger()
+        for handler in list(root_logger.handlers):
+            if isinstance(handler, RotatingFileHandler):
+                handler.close()
+                root_logger.removeHandler(handler)
         shutil.rmtree(os.environ["CUOTIBU_DATA_DIR"], ignore_errors=True)
 
     @staticmethod
