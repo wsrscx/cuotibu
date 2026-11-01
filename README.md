@@ -64,12 +64,12 @@ python app.py
 默认模型可以通过环境变量覆盖：
 
 ```powershell
-$env:OPENROUTER_TEXT_MODEL = "qwen/qwen2.5-72b-instruct:free"
-$env:OPENROUTER_VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct:free"
+$env:OPENROUTER_TEXT_MODEL = "nvidia/nemotron-3.5-super-vl:free"
+$env:OPENROUTER_VISION_MODEL = "nvidia/nemotron-3.5-super-vl:free"
 python app.py
 ```
 
-免费模型可能限流或下线。可在 OpenRouter 控制台换成你账户可用的模型；模型名只影响 AI 功能，不影响错题本、作业和本地数据。
+默认使用 `nvidia/nemotron-3.5-super-vl:free`，它支持文本和图片，并且当前是免费模型。免费模型可能限流或下线；可在 OpenRouter 控制台换成你账户可用的模型。模型名只影响 AI 功能，不影响错题本、作业和本地数据。
 
 ## 打包成单个 EXE
 
@@ -133,8 +133,8 @@ python -m unittest discover -s tests -v
 | `PORT` | `88` | 起始端口；被占用时自动递增 |
 | `FLASK_DEBUG` | 关闭 | 开发者调试模式，不要在公开环境开启 |
 | `CUOTIBU_NO_BROWSER` | 关闭 | 设为 `1` 时不自动打开浏览器，便于自动化测试 |
-| `OPENROUTER_TEXT_MODEL` | `qwen/qwen2.5-72b-instruct:free` | 文本分析/出题模型 |
-| `OPENROUTER_VISION_MODEL` | `qwen/qwen2.5-vl-72b-instruct:free` | 图片 OCR/视觉分析模型 |
+| `OPENROUTER_TEXT_MODEL` | `nvidia/nemotron-3.5-super-vl:free` | 文本分析/出题模型 |
+| `OPENROUTER_VISION_MODEL` | `nvidia/nemotron-3.5-super-vl:free` | 图片 OCR/视觉分析模型 |
 | `OPENROUTER_URL` | OpenRouter 官方接口 | 兼容接口地址 |
 | `AI_MAX_RETRIES` | `3` | AI 请求最大尝试次数 |
 

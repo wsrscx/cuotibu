@@ -75,7 +75,7 @@ from utils import (
 
 APP_NAME = "错题簿"
 APP_SLUG = "cuotibu"
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.0.1"
 AUTO_NOTEBOOK_TITLE = "自动收录的错题"
 ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024

@@ -18,12 +18,11 @@ class AIError(RuntimeError):
 OPENROUTER_URL = os.environ.get(
     "OPENROUTER_URL", "https://openrouter.ai/api/v1/chat/completions"
 )
-TEXT_MODEL = os.environ.get(
-    "OPENROUTER_TEXT_MODEL", "qwen/qwen2.5-72b-instruct:free"
-)
-VISION_MODEL = os.environ.get(
-    "OPENROUTER_VISION_MODEL", "qwen/qwen2.5-vl-72b-instruct:free"
-)
+# One capable multimodal model is the default for both text and images.
+# Users can still point the two variables at different models.
+DEFAULT_MODEL = "nvidia/nemotron-3.5-super-vl:free"
+TEXT_MODEL = os.environ.get("OPENROUTER_TEXT_MODEL", DEFAULT_MODEL)
+VISION_MODEL = os.environ.get("OPENROUTER_VISION_MODEL", DEFAULT_MODEL)
 MAX_RETRIES = max(1, int(os.environ.get("AI_MAX_RETRIES", "3")))
 REQUEST_TIMEOUT = (10, 90)
 
