@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, empty_state, status_badge %}
+
+{% block title %}教师工作台 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">教师工作台 / {{ g.user.username }}</p>
+    <h1>
+      {% if pending_count %}
+        有 {{ pending_count }} 份作业等你批改。
+      {% else %}
+        今天的作业都处理完了。
+      {% endif %}
+    </h1>
+    <p class="page-sub">上传教材、从页面生成题目、分配给学生，再把批改结果收回来。</p>
+  </div>
+  <div class="actions">
+    <button class="btn" type="button" data-open-dialog="uploadTextbookDialog">
+      {{ icon('upload', 'icon-sm') }} 上传教材
+    </button>
+    <button class="btn btn-primary" type="button" data-open-dialog="createAssignmentDialog" {% if not textbooks %}disabled title="先上传一本教材"{% endif %}>
+      {{ icon('plus', 'icon-sm') }} 创建作业
+    </button>
+  </div>
+</div>
+
+<div class="stat-strip" aria-label="教学概览">
+  <div class="stat">
+    <div class="stat-label">教材</div>
+    <div class="stat-value">{{ textbooks|length }}<small> 本</small></div>
+    <div class="stat-note">用于识别页面与生成题目</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">作业</div>
+    <div class="stat-value">{{ assignments|length }}<small> 份</small></div>
+    <div class="stat-note">已创建的全部作业</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">学生</div>
+    <div class="stat-value">{{ students|length }}<small> 人</small></div>
+    <div class="stat-note"><a href="{{ url_for('manage_students') }}">管理班级</a></div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">待批改</div>
+    <div class="stat-value">{{ pending_count }}<small> 份</small></div>
+    <div class="stat-note">已提交、尚未评分</div>
+  </div>
+</div>
+
+<div class="split-main mt-4">
+  <div class="stack">
+    <section class="card" aria-labelledby="textbooksTitle">
+      <div class="card-head">
+        <div>
+          <h2 id="textbooksTitle">教材</h2>
+          <p class="tiny muted">每本教材是一张可识别的页面图片</p>
+        </div>
+        <button class="btn btn-sm" type="button" data-open-dialog="uploadTextbookDialog">上传</button>
+      </div>
+      <div class="card-body">
+        {% if textbooks %}
+          <ul class="list-clean">
+            {% for textbook in textbooks %}
+              <li class="list-row">
+                <span class="list-index">{{ '%02d'|format(loop.index) }}</span>
+                <div class="list-main">
+                  <div class="list-title"><a href="{{ url_for('view_textbook', textbook_id=textbook.id) }}">{{ textbook.title }}</a></div>
+                  <div class="list-meta">
+                    <span>{{ textbook.description or '暂无描述' }}</span>
+                    <span>{{ textbook.assignments|length }} 份作业</span>
+                    <span>{{ textbook.created_at.strftime('%Y-%m-%d') }}</span>
+                  </div>
+                </div>
+                <a class="btn btn-sm" href="{{ url_for('view_textbook', textbook_id=textbook.id) }}">查看</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          {{ empty_state('还没有教材', '上传一张教材页面图片，就可以从这一页生成题目。', 'book') }}
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="assignmentsTitle">
+      <div class="card-head">
+        <div>
+          <h2 id="assignmentsTitle">作业</h2>
+          <p class="tiny muted">题目生成后分配给学生</p>
+        </div>
+        <span class="tiny muted">{{ assignments|length }} 份</span>
+      </div>
+      <div class="card-body">
+        {% if assignments %}
+          <ul class="list-clean">
+            {% for assignment in assignments %}
+              <li class="list-row">
+                <span class="list-index">{{ '%02d'|format(loop.index) }}</span>
+                <div class="list-main">
+                  <div class="list-title"><a href="{{ url_for('view_assignment', assignment_id=assignment.id) }}">{{ assignment.title }}</a></div>
+                  <div class="list-meta">
+                    <span>{{ assignment.textbook.title }}</span>
+                    <span>{{ assignment.questions|length }} 道题</span>
+                    <span>{{ assignment.student_assignments|length }} 名学生</span>
+                    <span>截止 {{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '未设置' }}</span>
+                  </div>
+                </div>
+                <a class="btn btn-sm" href="{{ url_for('view_assignment', assignment_id=assignment.id) }}">管理</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          {{ empty_state('还没有作业', '上传教材后，从教材页面生成题目并创建作业。', 'file') }}
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="submissionsTitle">
+      <div class="card-head">
+        <div>
+          <h2 id="submissionsTitle">最近提交</h2>
+          <p class="tiny muted">最新的学生作答记录</p>
+        </div>
+        {% if pending_count %}<span class="badge badge-accent">{{ pending_count }} 份待批改</span>{% endif %}
+      </div>
+      <div class="card-body">
+        {% if recent_submissions %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>学生</th><th>作业</th><th>状态</th><th class="num">分数</th><th>提交时间</th><th></th></tr>
+              </thead>
+              <tbody>
+                {% for submission in recent_submissions %}
+                  <tr>
+                    <td>{{ submission.student.username }}</td>
+                    <td>{{ submission.assignment.title }}</td>
+                    <td>{{ status_badge(submission.status, submission.status_label) }}</td>
+                    <td class="num">{{ submission.score|num if submission.score is not none else '—' }}</td>
+                    <td class="mono tiny">{{ submission.submitted_at.strftime('%m/%d %H:%M') if submission.submitted_at else '—' }}</td>
+                    <td class="row-actions">
+                      {% if submission.status == 'submitted' %}
+                        <a class="btn btn-sm" href="{{ url_for('grade_assignment', submission_id=submission.id) }}">批改</a>
+                      {% elif submission.status == 'graded' %}
+                        <a class="btn btn-sm btn-ghost" href="{{ url_for('grade_assignment', submission_id=submission.id) }}">查看</a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          {{ empty_state('还没有提交', '把作业分配给学生后，提交记录会出现在这里。', 'users') }}
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="card" aria-labelledby="classTitle">
+      <div class="card-head">
+        <div>
+          <h2 id="classTitle">班级</h2>
+          <p class="tiny muted">{{ students|length }} 名学生</p>
+        </div>
+        <a class="btn btn-sm" href="{{ url_for('manage_students') }}">管理</a>
+      </div>
+      <div class="card-body">
+        {% if students %}
+          <ul class="list-clean">
+            {% for student in students[:6] %}
+              <li class="list-row" style="padding:9px 0">
+                <span class="avatar">{{ student.initial }}</span>
+                <div class="list-main">
+                  <div class="list-title">{{ student.username }}</div>
+                  <div class="list-meta">{{ student.email }}</div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if students|length > 6 %}<p class="tiny muted mt-2">还有 {{ students|length - 6 }} 名学生，去班级页查看。</p>{% endif %}
+        {% else %}
+          <p class="small muted">还没有学生。让学生在注册时选择「学生」，然后在班级页按用户名添加。</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="teacherNotesTitle">
+      <div class="card-head">
+        <div>
+          <h2 id="teacherNotesTitle">教学流程</h2>
+          <p class="tiny muted">一条最短路径</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <ol class="small muted" style="padding-left:18px;margin:0;display:grid;gap:8px">
+          <li>上传一页教材图片。</li>
+          <li>创建作业，从这一页识别文字并生成题目。</li>
+          <li>在作业页分配给学生。</li>
+          <li>学生提交后，手动批改或让 AI 自动判题。</li>
+        </ol>
+        <hr class="divider">
+        <p class="tiny muted">
+          {% if has_api_key %}
+            OpenRouter 密钥已配置，可以使用识别、出题与自动判题。
+          {% else %}
+            还没有配置 OpenRouter 密钥。 <a href="{{ url_for('settings') }}">去设置</a>
+          {% endif %}
+        </p>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<dialog id="uploadTextbookDialog" aria-labelledby="uploadTextbookTitle">
+  <form method="post" action="{{ url_for('upload_textbook') }}" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="dialog-head">
+      <div>
+        <h2 id="uploadTextbookTitle">上传教材</h2>
+        <p>当前版本以图片页面为单位，一页一本。</p>
+      </div>
+      <button class="dialog-close" type="button" data-close-dialog aria-label="关闭">{{ icon('close') }}</button>
+    </div>
+    <div class="dialog-body stack-sm">
+      <div class="field">
+        <label for="textbookTitle">名称</label>
+        <input class="input" id="textbookTitle" name="title" type="text" maxlength="160" required placeholder="例如：高中数学必修一 · 第 3 页">
+      </div>
+      <div class="field">
+        <label for="textbookDescription">描述（可选）</label>
+        <textarea class="textarea" id="textbookDescription" name="description" rows="2" maxlength="1000" placeholder="章节、知识点或来源"></textarea>
+      </div>
+      <div class="field">
+        <label for="textbookImage">页面图片</label>
+        <input class="file-input" id="textbookImage" name="image_file" type="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" required
+               data-file-preview="#textbookPreview">
+        <span class="field-hint">支持 PNG、JPG、GIF、BMP、WebP，最大 10 MB。</span>
+        <img id="textbookPreview" class="file-preview hide" alt="教材预览">
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" type="button" data-close-dialog>取消</button>
+      <button class="btn btn-primary" type="submit">上传</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="createAssignmentDialog" aria-labelledby="createAssignmentTitle">
+  <form method="post" action="{{ url_for('create_assignment') }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="dialog-head">
+      <div>
+        <h2 id="createAssignmentTitle">创建作业</h2>
+        <p>先选教材，题目在作业详情页生成。</p>
+      </div>
+      <button class="dialog-close" type="button" data-close-dialog aria-label="关闭">{{ icon('close') }}</button>
+    </div>
+    <div class="dialog-body stack-sm">
+      <div class="field">
+        <label for="assignmentTitle">作业名称</label>
+        <input class="input" id="assignmentTitle" name="title" type="text" maxlength="160" required placeholder="例如：函数单调性 · 课后练习">
+      </div>
+      <div class="field">
+        <label for="assignmentTextbook">教材</label>
+        <select class="select" id="assignmentTextbook" name="textbook_id" required>
+          {% for textbook in textbooks %}
+            <option value="{{ textbook.id }}">{{ textbook.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="assignmentDue">截止日期（可选）</label>
+        <input class="input" id="assignmentDue" name="due_date" type="date">
+      </div>
+      <div class="field">
+        <label for="assignmentDescription">描述（可选）</label>
+        <textarea class="textarea" id="assignmentDescription" name="description" rows="2" maxlength="2000" placeholder="作业范围、要求或提示"></textarea>
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" type="button" data-close-dialog>取消</button>
+      <button class="btn btn-primary" type="submit">创建并进入</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

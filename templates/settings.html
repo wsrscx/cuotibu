@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+
+{% block title %}设置 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">设置 / {{ user.username }}</p>
+    <h1>账户与数据</h1>
+    <p class="page-sub">这里保存的是本机账户信息。API 密钥只用于向 OpenRouter 发起请求，不会上传到其他服务。</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('dashboard') }}">{{ icon('arrow-left', 'icon-sm') }} 返回工作台</a>
+  </div>
+</div>
+
+<div class="settings-grid">
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>OpenRouter API 密钥</h2>
+        <p class="tiny muted">用于分析错题、识别图片、生成题目和自动判题</p>
+      </div>
+      {% if has_key %}<span class="badge badge-green">已配置</span>{% else %}<span class="badge badge-amber">未配置</span>{% endif %}
+    </div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('settings') }}" class="stack-sm">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="api_key">
+        <div class="field">
+          <label for="openrouter_api_key">新密钥</label>
+          <input class="input" id="openrouter_api_key" name="openrouter_api_key" type="password"
+                 autocomplete="off" placeholder="{{ '已保存 ' ~ masked_key if has_key else 'sk-or-v1-…' }}">
+          <span class="field-hint">留空表示不修改。教师需要密钥；学生可以使用绑定教师的密钥。</span>
+        </div>
+        {% if has_key %}
+          <label class="check"><input type="checkbox" name="clear_api_key"> 清除当前密钥</label>
+        {% endif %}
+        <div class="cluster">
+          <button class="btn btn-primary" type="submit">保存密钥</button>
+          <a class="btn btn-ghost" href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">获取密钥 {{ icon('external', 'icon-sm') }}</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>修改密码</h2>
+        <p class="tiny muted">修改后需要重新登录其他会话</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('settings') }}" class="stack-sm">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="password">
+        <div class="field">
+          <label for="current_password">当前密码</label>
+          <input class="input" id="current_password" name="current_password" type="password" autocomplete="current-password" required>
+        </div>
+        <div class="field">
+          <label for="new_password">新密码</label>
+          <input class="input" id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="8" required>
+        </div>
+        <div class="field">
+          <label for="confirm_new_password">确认新密码</label>
+          <input class="input" id="confirm_new_password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+        </div>
+        <button class="btn btn-primary" type="submit">更新密码</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>本地数据</h2>
+        <p class="tiny muted">数据库、上传图片和日志都在这个目录</p>
+      </div>
+      {{ icon('shield') }}
+    </div>
+    <div class="card-body">
+      <p class="small muted">程序不会把学习数据上传到服务器。备份时复制整个目录即可。</p>
+      <div class="data-path">{{ data_dir }}</div>
+      <div class="stack-sm mt-3">
+        <div class="spread"><span class="small muted">数据库</span><span class="small mono">notebook.db</span></div>
+        <div class="spread"><span class="small muted">日志</span><span class="small mono">app.log</span></div>
+        <div class="spread"><span class="small muted">版本</span><span class="small mono">{{ app_version }}</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>隐私与安全</h2>
+        <p class="tiny muted">本地优先的默认设置</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <ul class="small muted" style="padding-left:18px;margin:0;display:grid;gap:8px">
+        <li>数据库使用 SQLite，文件保存在上面的数据目录。</li>
+        <li>密码以哈希形式存储；会话使用本地生成的密钥签名。</li>
+        <li>API 密钥只存在本地数据库中，不会写进日志。</li>
+        <li>分享链接是只读的；可以随时在错题本里重新生成。</li>
+        <li>删除程序目录中的 <span class="mono">data</span> 文件夹会同时删除所有本地数据，请先备份。</li>
+      </ul>
+    </div>
+  </section>
+</div>
+{% endblock %}

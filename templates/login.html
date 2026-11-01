@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+
+{% block title %}登录 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="auth-layout">
+  <aside class="auth-aside">
+    <p class="eyebrow">回来继续</p>
+    <h1>错题还在，复习节奏也还在。</h1>
+    <p>登录后查看今天的到期错题、练习记录和作业状态。所有内容保存在本机。</p>
+  </aside>
+
+  <section class="auth-card" aria-labelledby="loginTitle">
+    <h2 id="loginTitle">登录</h2>
+    <p class="sub">使用用户名或邮箱进入你的档案。</p>
+    <form method="post" action="{{ url_for('login') }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="identifier">用户名或邮箱</label>
+        <input class="input" id="identifier" name="identifier" type="text" autocomplete="username"
+               value="{{ form.get('identifier', '') if form else '' }}" required autofocus>
+      </div>
+      <div class="field">
+        <label for="password">密码</label>
+        <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-primary btn-block mt-1" type="submit">登录 {{ icon('arrow-right', 'icon-sm') }}</button>
+    </form>
+    <p class="auth-foot">还没有账户？<a href="{{ url_for('register') }}">创建一个</a></p>
+  </section>
+</div>
+{% endblock %}

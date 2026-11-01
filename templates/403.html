@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}没有权限 · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="error-page">
+  <span class="error-code">ERROR 403</span>
+  <h1>这份档案不向你开放。</h1>
+  <p>请使用对应的账户登录，或回到自己的工作台。</p>
+  <a class="btn btn-primary" href="{{ url_for('dashboard') if g.user else url_for('login') }}">返回{{ '工作台' if g.user else '登录' }}</a>
+</div>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, status_badge, empty_state %}
+
+{% block title %}{{ assignment.title }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="面包屑">
+  <a href="{{ url_for('student_dashboard') }}">工作台</a>
+  <span>/</span>
+  <span>作业</span>
+</nav>
+
+<div class="page-head">
+  <div>
+    <p class="eyebrow">学生作业</p>
+    <h1>{{ assignment.title }}</h1>
+    <p class="page-sub">{{ assignment.description or '暂无描述。' }}</p>
+  </div>
+  <div class="actions">
+    {{ status_badge(student_assignment.status, student_assignment.status_label) }}
+    <a class="btn" href="{{ url_for('student_dashboard') }}">{{ icon('arrow-left', 'icon-sm') }} 返回工作台</a>
+  </div>
+</div>
+
+<div class="stat-strip mb-4">
+  <div class="stat">
+    <div class="stat-label">状态</div>
+    <div class="stat-value" style="font-size:1.35rem">{{ student_assignment.status_label }}</div>
+    <div class="stat-note">{{ '提交于 ' ~ student_assignment.submitted_at.strftime('%m/%d %H:%M') if student_assignment.submitted_at else '尚未提交' }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">题目</div>
+    <div class="stat-value">{{ questions|length }}<small> 道</small></div>
+    <div class="stat-note">总分 {{ assignment.total_points|num }} 分</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">截止日期</div>
+    <div class="stat-value" style="font-size:1.35rem">{{ assignment.due_date.strftime('%m/%d') if assignment.due_date else '—' }}</div>
+    <div class="stat-note">{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '未设置' }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">成绩</div>
+    <div class="stat-value">{{ student_assignment.score if student_assignment.score is not none else '—' }}<small> 分</small></div>
+    <div class="stat-note">{{ '已批改' if student_assignment.status == 'graded' else '等待批改' }}</div>
+  </div>
+</div>
+
+{% if student_assignment.status == 'graded' %}
+  <section class="card mb-4">
+    <div class="card-body spread">
+      <div>
+        <p class="eyebrow">本次成绩</p>
+        <div class="score-display">{{ student_assignment.score|num }}<small> / 100</small></div>
+      </div>
+      <div style="max-width:52ch">
+        <p class="small muted">教师反馈</p>
+        <p class="small">{{ student_assignment.feedback or '没有留下文字反馈。' }}</p>
+      </div>
+    </div>
+  </section>
+{% endif %}
+
+{% if questions %}
+  {% if student_assignment.can_submit %}
+    <form id="assignmentForm" data-assignment-id="{{ assignment.id }}">
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>作答</h2>
+            <p class="tiny muted">提交后不能修改；请确认所有答案。</p>
+          </div>
+        </div>
+        <div class="card-body">
+          {% for question in questions %}
+            <div class="question-block" data-question-id="{{ question.id }}" data-question-type="{{ question.question_type }}">
+              <div class="question-head">
+                <span class="question-number">{{ '%02d'|format(loop.index) }}</span>
+                <div>
+                  <div class="cluster">
+                    <span class="badge">{{ question.type_label }}</span>
+                    <span class="tiny muted">{{ question.points|num }} 分</span>
+                  </div>
+                  <p class="question-content mt-1">{{ question.content }}</p>
+                </div>
+              </div>
+
+              {% if question.question_type == 'single_choice' %}
+                <div class="choice-list" style="margin-left:38px">
+                  {% for option in question.options_list %}
+                    <label class="choice-card">
+                      <input type="radio" name="question_{{ question.id }}" value="{{ option }}">
+                      <span>{{ option }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              {% elif question.question_type == 'multiple_choice' %}
+                <div class="choice-list" style="margin-left:38px">
+                  {% for option in question.options_list %}
+                    <label class="choice-card">
+                      <input type="checkbox" name="question_{{ question.id }}" value="{{ option }}">
+                      <span>{{ option }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              {% elif question.question_type == 'true_false' %}
+                <div class="choice-list" style="margin-left:38px">
+                  <label class="choice-card"><input type="radio" name="question_{{ question.id }}" value="正确"><span>正确</span></label>
+                  <label class="choice-card"><input type="radio" name="question_{{ question.id }}" value="错误"><span>错误</span></label>
+                </div>
+              {% elif question.question_type == 'fill_blank' %}
+                <div style="margin-left:38px;margin-top:10px">
+                  <input class="input" type="text" name="question_{{ question.id }}" placeholder="填写答案">
+                </div>
+              {% else %}
+                <div style="margin-left:38px;margin-top:10px">
+                  <textarea class="textarea" name="question_{{ question.id }}" rows="4" placeholder="写下你的答案或解题过程"></textarea>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <div class="card-foot">
+          <span class="tiny muted">提交后教师会看到你的答案。</span>
+          <button class="btn btn-primary" type="submit">{{ icon('send', 'icon-sm') }} 提交作业</button>
+        </div>
+      </section>
+    </form>
+  {% else %}
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>我的作答</h2>
+          <p class="tiny muted">{{ '已提交，等待教师批改。' if student_assignment.status == 'submitted' else '批改结果如下。' }}</p>
+        </div>
+      </div>
+      <div class="card-body">
+        {% for question in questions %}
+          {% set answer = answers_map.get(question.id) %}
+          <div class="question-block">
+            <div class="question-head">
+              <span class="question-number">{{ '%02d'|format(loop.index) }}</span>
+              <div>
+                <div class="cluster">
+                  <span class="badge">{{ question.type_label }}</span>
+                  {% if answer and answer.is_correct is not none %}
+                    <span class="badge {{ 'badge-green' if answer.is_correct else 'badge-danger' }}">{{ '正确' if answer.is_correct else '错误' }}</span>
+                    {% if answer.score is not none %}<span class="tiny muted">{{ answer.score|num }} / {{ question.points|num }} 分</span>{% endif %}
+                  {% endif %}
+                </div>
+                <p class="question-content mt-1">{{ question.content }}</p>
+                {% if question.options_list %}
+                  <ul class="question-options">
+                    {% for option in question.options_list %}<li>{{ option }}</li>{% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+            </div>
+            <div class="answer-box">
+              <strong>我的答案</strong>{{ answer.answer_content if answer and answer.answer_content else '（未作答）' }}
+            </div>
+            {% if student_assignment.status == 'graded' %}
+              <div class="answer-box">
+                <strong>参考答案</strong>{{ question.correct_answer }}
+                {% if question.explanation %}<hr class="divider" style="margin:8px 0"><strong>解析</strong>{{ question.explanation }}{% endif %}
+              </div>
+              {% if answer and answer.feedback %}
+                <div class="answer-box"><strong>教师反馈</strong>{{ answer.feedback }}</div>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+{% else %}
+  <div class="card">
+    {{ empty_state('这份作业还没有题目', '等待教师从教材中生成题目。', 'file') }}
+  </div>
+{% endif %}
+{% endblock %}

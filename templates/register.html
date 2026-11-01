@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+
+{% block title %}创建账户 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="auth-layout">
+  <aside class="auth-aside">
+    <p class="eyebrow">建立档案</p>
+    <h1>先选身份，再开始记录。</h1>
+    <p>学生管理自己的错题与练习；教师上传教材、生成题目、布置并批改作业。两种身份可以随时注册另一个账户。</p>
+  </aside>
+
+  <section class="auth-card" aria-labelledby="registerTitle">
+    <h2 id="registerTitle">创建账户</h2>
+    <p class="sub">账户只保存在本机数据库中。</p>
+    <form method="post" action="{{ url_for('register') }}" id="registerForm">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="form-grid">
+        <div class="field span-2">
+          <label for="username">用户名</label>
+          <input class="input" id="username" name="username" type="text" autocomplete="username"
+                 value="{{ form.get('username', '') if form else '' }}" minlength="3" maxlength="30" required>
+          <span class="field-hint">3 到 30 个字符，可使用中文、字母、数字、点、下划线和短横线。</span>
+        </div>
+        <div class="field span-2">
+          <label for="email">邮箱</label>
+          <input class="input" id="email" name="email" type="email" autocomplete="email"
+                 value="{{ form.get('email', '') if form else '' }}" required>
+        </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input class="input" id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+        </div>
+        <div class="field">
+          <label for="confirm_password">确认密码</label>
+          <input class="input" id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+        </div>
+      </div>
+
+      <fieldset class="field" style="border:0;padding:0;margin:0">
+        <legend class="field-label">账户类型</legend>
+        <div class="role-options">
+          <label class="choice-card">
+            <input type="radio" name="role" value="student" {% if not form or form.get('role', 'student') == 'student' %}checked{% endif %}>
+            <span><strong>学生</strong><br><span class="field-hint">错题、练习、作业与成绩</span></span>
+          </label>
+          <label class="choice-card">
+            <input type="radio" name="role" value="teacher" {% if form and form.get('role') == 'teacher' %}checked{% endif %}>
+            <span><strong>教师</strong><br><span class="field-hint">教材、出题、班级与批改</span></span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="field" id="apiKeyField">
+        <label for="api_key">OpenRouter API 密钥</label>
+        <input class="input" id="api_key" name="api_key" type="password" autocomplete="off"
+               placeholder="sk-or-v1-…">
+        <span class="field-hint" id="apiKeyHint">教师账户需要密钥才能使用 AI 出题与批改。学生可以留空，之后使用绑定教师的密钥。</span>
+      </div>
+
+      <button class="btn btn-primary btn-block mt-1" type="submit">创建账户 {{ icon('arrow-right', 'icon-sm') }}</button>
+    </form>
+    <p class="auth-foot">已经有账户？<a href="{{ url_for('login') }}">直接登录</a></p>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, empty_state %}
+
+{% block title %}{{ notebook.title }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="面包屑">
+  <a href="{{ url_for('student_dashboard') }}">工作台</a>
+  <span>/</span>
+  <span>{{ notebook.title }}</span>
+</nav>
+
+<div class="page-head">
+  <div>
+    <p class="eyebrow">错题本 / {{ notebook.notes|length }} 道</p>
+    <h1>{{ notebook.title }}</h1>
+    <p class="page-sub">{{ notebook.description or '这一本还没有描述。' }}</p>
+  </div>
+  <div class="actions">
+    <button class="btn" type="button" data-open-dialog="shareDialog">
+      {{ icon('share', 'icon-sm') }} 分享
+    </button>
+    <button class="btn btn-primary" type="button" data-open-dialog="addNoteDialog">
+      {{ icon('plus', 'icon-sm') }} 添加错题
+    </button>
+  </div>
+</div>
+
+<div class="spread mb-3">
+  <form class="cluster" method="get" action="{{ url_for('view_notebook', notebook_id=notebook.id) }}" role="search">
+    <label class="sr-only" for="noteSearch">搜索错题</label>
+    <input class="input" id="noteSearch" name="q" type="search" value="{{ query_text }}" placeholder="搜索标题、内容、分类或标签" style="min-width:min(340px,70vw)">
+    <button class="btn" type="submit">{{ icon('search', 'icon-sm') }} 搜索</button>
+    {% if query_text %}<a class="btn btn-ghost" href="{{ url_for('view_notebook', notebook_id=notebook.id) }}">清除</a>{% endif %}
+  </form>
+  <span class="tiny muted">{{ notes|length }}{% if query_text %} 条结果{% endif %}</span>
+</div>
+
+{% if notes %}
+  <div class="card card-pad">
+    {% for note in notes %}
+      <article class="note-card" data-note-card="{{ note.id }}">
+        <div class="note-card-head">
+          <div>
+            <h3>
+              <button class="btn btn-ghost" type="button" data-view-note="{{ note.id }}"
+                      style="padding:0;min-height:0;font-weight:650;font-size:1.02rem;text-align:left">
+                {{ note.title }}
+              </button>
+            </h3>
+            <div class="list-meta">
+              {% if note.category %}<span class="badge badge-accent">{{ note.category }}</span>{% endif %}
+              {% for tag in note.tags_list %}<span class="tag">{{ tag }}</span>{% endfor %}
+              <span>{{ note.created_at.strftime('%Y-%m-%d') }}</span>
+              {% if note.next_review_date %}<span>下次复习 {{ note.next_review_date.strftime('%m/%d') }}</span>{% endif %}
+            </div>
+          </div>
+          <div class="note-card-actions">
+            <button class="btn btn-sm btn-ghost" type="button" data-view-note="{{ note.id }}" title="查看">{{ icon('eye', 'icon-sm') }}</button>
+            <button class="btn btn-sm btn-ghost" type="button" data-analyze-note="{{ note.id }}" title="AI 分析">{{ icon('scan', 'icon-sm') }}</button>
+            <button class="btn btn-sm btn-ghost" type="button"
+                    data-edit-note="{{ note.id }}"
+                    data-action="{{ url_for('edit_note', notebook_id=notebook.id, note_id=note.id) }}"
+                    title="编辑">{{ icon('edit', 'icon-sm') }}</button>
+            <button class="btn btn-sm btn-ghost" type="button"
+                    data-delete-note="{{ url_for('delete_note', notebook_id=notebook.id, note_id=note.id) }}"
+                    data-confirm="删除后无法恢复。确定删除「{{ note.title }}」吗？"
+                    title="删除">{{ icon('trash', 'icon-sm') }}</button>
+          </div>
+        </div>
+        <p>{{ note.summary }}</p>
+        {% if note.image_path %}
+          <img class="note-image" src="{{ note.image_path|image_url }}" alt="{{ note.title }} 的图片" loading="lazy">
+        {% endif %}
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    {% if query_text %}
+      {{ empty_state('没有匹配的错题', '换一个关键词，或清除搜索条件。', 'search') }}
+    {% else %}
+      {{ empty_state('这一本还是空的', '添加第一道错题。可以手写内容、上传图片，或从链接导入。', 'file') }}
+      <div class="cluster" style="justify-content:center;padding-bottom:28px">
+        <button class="btn btn-primary" type="button" data-open-dialog="addNoteDialog">添加错题</button>
+        <button class="btn" type="button" data-open-dialog="linkDialog">从链接导入</button>
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
+
+<dialog id="addNoteDialog" class="wide" aria-labelledby="addNoteTitle">
+  <form method="post" action="{{ url_for('add_note', notebook_id=notebook.id) }}" enctype="multipart/form-data" id="addNoteForm">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="dialog-head">
+      <div>
+        <h2 id="addNoteTitle">添加错题</h2>
+        <p>先记录原始过程，AI 分析会在保存后自动进行。</p>
+      </div>
+      <div class="cluster">
+        <button class="btn btn-sm" type="button" data-open-dialog="linkDialog">{{ icon('link', 'icon-sm') }} 从链接导入</button>
+        <button class="dialog-close" type="button" data-close-dialog aria-label="关闭">{{ icon('close') }}</button>
+      </div>
+    </div>
+    <div class="dialog-body stack-sm">
+      <div class="field">
+        <label for="noteTitle">标题</label>
+        <input class="input" id="noteTitle" name="title" type="text" maxlength="160" placeholder="例如：二次函数单调区间判断">
+      </div>
+      <div class="field">
+        <label for="noteContent">错题内容与错误过程</label>
+        <textarea class="textarea" id="noteContent" name="content" rows="7" placeholder="题目、你的解法、卡住的地方…"></textarea>
+      </div>
+      <div class="field">
+        <label for="noteImage">图片（可选）</label>
+        <input class="file-input" id="noteImage" name="image" type="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp"
+               data-file-preview="#notePreview">
+        <span class="field-hint">有 API 密钥时会先做文字识别；没有也可以只保存图片。</span>
+        <img id="notePreview" class="file-preview hide" alt="错题预览">
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" type="button" data-close-dialog>取消</button>
+      <button class="btn btn-primary" type="submit">保存错题</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="linkDialog" aria-labelledby="linkDialogTitle">
+  <div class="dialog-head">
+    <div>
+      <h2 id="linkDialogTitle">从链接导入</h2>
+      <p>读取公开网页的文字，填入错题内容。</p>
+    </div>
+    <button class="dialog-close" type="button" data-close-dialog aria-label="关闭">{{ icon('close') }}</button>
+  </div>
+  <form id="linkAnalyzeForm">
+    <div class="dialog-body stack-sm">
+      <div class="field">
+        <label for="errorLink">网页链接</label>
+        <input class="input" id="errorLink" name="link" type="url" placeholder="https://…" required>
+        <span class="field-hint">仅支持公开的 http(s) 页面；内网地址会被拒绝。</span>
+      </div>
+      <p class="tiny muted">导入后仍需要检查文字是否完整，再保存。</p>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" type="button" data-close-dialog>取消</button>
+      <button class="btn btn-primary" type="submit">读取并填入</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="editNoteDialog" class="wide" aria-labelledby="editNoteTitle">
+  <form method="post" action="" id="editNoteForm" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="dialog-head">
+      <div>
+        <h2 id="editNoteTitle">编辑错题</h2>
+        <p>修改内容后，之前的 AI 分析会被清空。</p>
+      </div>
+      <button class="dialog-close" type="button" data-close-dialog aria-label="关闭">{{ icon('close') }}</button>
+    </div>
+    <div class="dialog-body stack-sm">
+      <div class="field">
+        <label for="editTitle">标题</label>
+        <input class="input" id="editTitle" name="title" type="text" maxlength="160" required>
+      </div>
+      <div class="field">
+        <label for="editContent">内容</label>
+        <textarea class="textarea" id="editContent" name="content" rows="7" required></textarea>
+      </div>
+      <div class="field">
+        <label for="editImage">替换图片（可选）</label>
+        <input class="file-input" id="editImage" name="image" type="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp">
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" type="button" data-close-dialog>取消</button>
+      <button class="btn btn-primary" type="submit">保存修改</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="shareDialog" aria-labelledby="shareDialogTitle">
+  <div class="dialog-head">
+    <div>
+      <h2 id="shareDialogTitle">分享这本错题本</h2>
+      <p>任何拿到链接的人都可以只读查看。</p>
+    </div>
+    <button class="dialog-close" type="button" data-close-dialog aria-label="关闭">{{ icon('close') }}</button>
+  </div>
+  <div class="dialog-body stack-sm">
+    <div class="field">
+      <label for="shareUrl">只读链接</label>
+      <input class="input mono" id="shareUrl" type="text" readonly value="{{ share_url }}" data-share-url>
+    </div>
+    <p class="tiny muted">如果链接被转发到不想分享的地方，可以重新生成，旧链接会立即失效。</p>
+  </div>
+  <div class="dialog-foot">
+    <button class="btn btn-danger" type="button" data-rotate-share="{{ url_for('rotate_share', notebook_id=notebook.id) }}">重新生成</button>
+    <button class="btn btn-primary" type="button" data-copy-target="#shareUrl" data-share-copy>复制链接</button>
+  </div>
+</dialog>
+{% endblock %}

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Runtime data and secrets
+data/
+.demo-data/
+instance/
+static/uploads/
+secret.key
+*.db
+*.sqlite3
+*.log
+.env
+
+# Build output
+build/
+dist/
+assets/*.ico
+*.spec.bak
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.openchamber/

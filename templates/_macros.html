@@ -1,0 +1,24 @@
+{% macro icon(name, cls='') -%}
+<svg class="icon {{ cls }}" aria-hidden="true"><use href="#i-{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% macro status_badge(status, label) -%}
+{% set tone = {'assigned': 'amber', 'in_progress': 'blue', 'submitted': 'accent', 'graded': 'green'}.get(status, '') %}
+<span class="badge{% if tone %} badge-{{ tone }}{% endif %}">{{ label }}</span>
+{%- endmacro %}
+
+{% macro type_badge(question) -%}
+<span class="badge">{{ question.type_label }}</span>
+{%- endmacro %}
+
+{% macro empty_state(title, text, icon_name='file') -%}
+<div class="empty">
+  {{ icon(icon_name) }}
+  <h3>{{ title }}</h3>
+  <p>{{ text }}</p>
+</div>
+{%- endmacro %}
+
+{% macro avatar(user) -%}
+<span class="avatar" aria-hidden="true">{{ user.initial }}</span>
+{%- endmacro %}

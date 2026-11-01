@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, empty_state %}
+
+{% block title %}班级 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="面包屑">
+  <a href="{{ url_for('teacher_dashboard') }}">教师工作台</a>
+  <span>/</span>
+  <span>班级</span>
+</nav>
+
+<div class="page-head">
+  <div>
+    <p class="eyebrow">班级管理</p>
+    <h1>{{ students|length }} 名学生</h1>
+    <p class="page-sub">学生自行注册后，教师可以按用户名把他们加入班级。一个学生只能属于一个班级。</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('teacher_dashboard') }}">{{ icon('arrow-left', 'icon-sm') }} 返回工作台</a>
+  </div>
+</div>
+
+<div class="split-main">
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>我的学生</h2>
+        <p class="tiny muted">分配作业时会显示这些学生</p>
+      </div>
+    </div>
+    <div class="card-body">
+      {% if students %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>学生</th><th>邮箱</th><th>加入时间</th><th></th></tr></thead>
+            <tbody>
+              {% for student in students %}
+                <tr>
+                  <td>
+                    <span class="cluster" style="gap:7px">
+                      <span class="avatar">{{ student.initial }}</span>
+                      <span>{{ student.username }}</span>
+                    </span>
+                  </td>
+                  <td class="muted">{{ student.email }}</td>
+                  <td class="mono tiny">{{ student.created_at.strftime('%Y-%m-%d') }}</td>
+                  <td class="row-actions">
+                    <button class="btn btn-sm btn-ghost" type="button"
+                            data-remove-student="{{ url_for('remove_student', student_id=student.id) }}"
+                            data-confirm="确定把 {{ student.username }} 移出班级吗？">
+                      {{ icon('trash', 'icon-sm') }} 移出
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {{ empty_state('班级还是空的', '让学生在注册时选择「学生」，然后在右侧按用户名添加。', 'users') }}
+      {% endif %}
+    </div>
+  </section>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>添加学生</h2>
+          <p class="tiny muted">输入学生注册时使用的用户名</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('add_student') }}" class="stack-sm">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <div class="field">
+            <label for="studentUsername">用户名</label>
+            <input class="input" id="studentUsername" name="username" type="text" required placeholder="例如：lin">
+          </div>
+          <button class="btn btn-primary" type="submit">加入班级</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>未分配的学生</h2>
+          <p class="tiny muted">{{ unassigned_students|length }} 人</p>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if unassigned_students %}
+          <ul class="list-clean">
+            {% for student in unassigned_students[:8] %}
+              <li class="list-row" style="padding:9px 0">
+                <span class="avatar">{{ student.initial }}</span>
+                <div class="list-main">
+                  <div class="list-title">{{ student.username }}</div>
+                  <div class="list-meta">{{ student.email }}</div>
+                </div>
+                <form method="post" action="{{ url_for('add_student') }}">
+                  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                  <input type="hidden" name="student_id" value="{{ student.id }}">
+                  <button class="btn btn-sm" type="submit">添加</button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if unassigned_students|length > 8 %}<p class="tiny muted mt-2">还有 {{ unassigned_students|length - 8 }} 人，请直接在上方输入用户名。</p>{% endif %}
+        {% else %}
+          <p class="small muted">暂时没有未分配的学生。新注册的学生会出现在这里。</p>
+        {% endif %}
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

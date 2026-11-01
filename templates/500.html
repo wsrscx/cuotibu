@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}服务出错 · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="error-page">
+  <span class="error-code">ERROR 500</span>
+  <h1>程序遇到了一点问题。</h1>
+  <p>错误已写入本地日志。可以刷新重试；如果问题持续，请查看 <span class="mono">data/app.log</span>。</p>
+  <a class="btn btn-primary" href="{{ url_for('dashboard') if g.user else url_for('index') }}">返回{{ '工作台' if g.user else '首页' }}</a>
+</div>
+{% endblock %}

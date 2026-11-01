@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, empty_state %}
+
+{% block title %}{{ textbook.title }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="面包屑">
+  <a href="{{ url_for('teacher_dashboard') }}">教师工作台</a>
+  <span>/</span>
+  <span>教材</span>
+</nav>
+
+<div class="page-head">
+  <div>
+    <p class="eyebrow">教材页面</p>
+    <h1>{{ textbook.title }}</h1>
+    <p class="page-sub">{{ textbook.description or '暂无描述。' }}</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('teacher_dashboard') }}">{{ icon('arrow-left', 'icon-sm') }} 返回工作台</a>
+    <button class="btn btn-primary" type="button" data-open-dialog="textbookAssignmentDialog">
+      {{ icon('plus', 'icon-sm') }} 创建作业
+    </button>
+  </div>
+</div>
+
+<div class="split-main">
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2>页面图片</h2>
+        <p class="tiny muted">生成题目时会对这一页做文字识别。</p>
+      </div>
+      <span class="badge">{{ textbook.page_count or 1 }} 页</span>
+    </div>
+    <div class="card-body">
+      <img src="{{ textbook.file_path|image_url }}" alt="{{ textbook.title }}" style="width:100%;border:1px solid var(--line);border-radius:var(--radius-sm)">
+    </div>
+  </section>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>基于本页的作业</h2>
+          <p class="tiny muted">{{ assignments|length }} 份</p>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if assignments %}
+          <ul class="list-clean">
+            {% for assignment in assignments %}
+              <li class="list-row">
+                <span class="list-index">{{ '%02d'|format(loop.index) }}</span>
+                <div class="list-main">
+                  <div class="list-title"><a href="{{ url_for('view_assignment', assignment_id=assignment.id) }}">{{ assignment.title }}</a></div>
+                  <div class="list-meta">
+                    <span>{{ assignment.questions|length }} 道题</span>
+                    <span>{{ assignment.student_assignments|length }} 名学生</span>
+                    <span>截止 {{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '未设置' }}</span>
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          {{ empty_state('还没有作业', '创建一份作业，再从这一页生成题目。', 'file') }}
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-body">
+        <p class="eyebrow">建议顺序</p>
+        <ol class="small muted" style="padding-left:18px;margin:10px 0 0;display:grid;gap:7px">
+          <li>创建一份作业。</li>
+          <li>在作业页选择题型和数量，生成题目。</li>
+          <li>把作业分配给学生。</li>
+        </ol>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<dialog id="textbookAssignmentDialog" aria-labelledby="textbookAssignmentTitle">
+  <form method="post" action="{{ url_for('create_assignment') }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="textbook_id" value="{{ textbook.id }}">
+    <div class="dialog-head">
+      <div>
+        <h2 id="textbookAssignmentTitle">基于本页创建作业</h2>
+        <p>{{ textbook.title }}</p>
+      </div>
+      <button class="dialog-close" type="button" data-close-dialog aria-label="关闭">{{ icon('close') }}</button>
+    </div>
+    <div class="dialog-body stack-sm">
+      <div class="field">
+        <label for="textbookAssignmentName">作业名称</label>
+        <input class="input" id="textbookAssignmentName" name="title" type="text" maxlength="160" required placeholder="例如：这一页的课后练习">
+      </div>
+      <div class="field">
+        <label for="textbookAssignmentDue">截止日期（可选）</label>
+        <input class="input" id="textbookAssignmentDue" name="due_date" type="date">
+      </div>
+      <div class="field">
+        <label for="textbookAssignmentDescription">描述（可选）</label>
+        <textarea class="textarea" id="textbookAssignmentDescription" name="description" rows="2" maxlength="2000"></textarea>
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" type="button" data-close-dialog>取消</button>
+      <button class="btn btn-primary" type="submit">创建并进入</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

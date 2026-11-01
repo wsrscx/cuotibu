@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, empty_state %}
+
+{% block title %}{{ notebook.title }} · 只读分享{% endblock %}
+{% block head_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+<section class="share-head">
+  <p class="eyebrow">只读分享 / {{ app_name }}</p>
+  <h1>{{ notebook.title }}</h1>
+  <p class="page-sub">{{ notebook.description or '这份错题本没有描述。' }}</p>
+  <div class="cluster mt-2">
+    <span class="badge">{{ notes|length }} 道错题</span>
+    <span class="badge">{{ notebook.updated_at.strftime('%Y-%m-%d') }} 更新</span>
+    <span class="badge badge-accent">只读</span>
+  </div>
+</section>
+
+{% if notes %}
+  <div class="card card-pad">
+    {% for note in notes %}
+      <article class="share-note">
+        <div class="spread">
+          <h2>{{ note.title }}</h2>
+          <span class="tiny mono muted">{{ note.created_at.strftime('%Y-%m-%d') }}</span>
+        </div>
+        <div class="list-meta">
+          {% if note.category %}<span class="badge badge-accent">{{ note.category }}</span>{% endif %}
+          {% for tag in note.tags_list %}<span class="tag">{{ tag }}</span>{% endfor %}
+        </div>
+        <div class="note-body">{{ note.content }}</div>
+        {% if note.image_path %}
+          <img class="note-image" src="{{ note.image_path|image_url }}" alt="{{ note.title }}" loading="lazy">
+        {% endif %}
+        {% if note.category or note.answer or note.error_reason or note.improvement_suggestions %}
+          <details class="note-analysis mt-2">
+            <summary class="small">查看整理与订正</summary>
+            <dl class="mt-2">
+              {% if note.category %}<dt>分类</dt><dd>{{ note.category }}</dd>{% endif %}
+              {% if note.error_reason %}<dt>错因</dt><dd>{{ note.error_reason }}</dd>{% endif %}
+              {% if note.answer %}<dt>正确答案</dt><dd>{{ note.answer }}</dd>{% endif %}
+              {% if note.improvement_suggestions %}<dt>改进建议</dt><dd>{{ note.improvement_suggestions }}</dd>{% endif %}
+            </dl>
+          </details>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    {{ empty_state('这份错题本是空的', '作者还没有添加内容。', 'file') }}
+  </div>
+{% endif %}
+
+<p class="small muted mt-3">这份页面由 {{ app_name }} 生成，只能查看，不能编辑。</p>
+{% endblock %}

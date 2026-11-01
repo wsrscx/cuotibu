@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%231e1d1a'/%3E%3Cpath d='M18 20h28M18 32h20M18 44h14' stroke='%23f3f0e9' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<a class="skip-link" href="#main">跳到主要内容</a>
+{% include "_icons.html" %}
+{% from "_macros.html" import icon, avatar %}
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="{{ url_for('dashboard') if g.user else url_for('index') }}" aria-label="{{ app_name }} 首页">
+      <span class="brand-mark">错</span>
+      <span>
+        <span class="brand-name">{{ app_name }}</span>
+        <span class="brand-sub">CUOTIBU / LOCAL</span>
+      </span>
+    </a>
+
+    <nav class="site-nav" id="primary-nav" aria-label="主导航">
+      {% if g.user %}
+        <a href="{{ url_for('dashboard') }}" {% if request.endpoint in ['dashboard', 'student_dashboard', 'teacher_dashboard'] %}aria-current="page"{% endif %}>工作台</a>
+        {% if g.user.is_teacher %}
+          <a href="{{ url_for('manage_students') }}" {% if request.endpoint == 'manage_students' %}aria-current="page"{% endif %}>学生</a>
+        {% endif %}
+        <a href="{{ url_for('settings') }}" {% if request.endpoint == 'settings' %}aria-current="page"{% endif %}>设置</a>
+      {% else %}
+        <a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}aria-current="page"{% endif %}>首页</a>
+      {% endif %}
+    </nav>
+
+    <div class="header-actions">
+      {% if g.user %}
+        <span class="user-chip">
+          {{ avatar(g.user) }}
+          <span>{{ g.user.username }} · {{ '教师' if g.user.is_teacher else '学生' }}</span>
+        </span>
+        <form method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button class="btn btn-ghost btn-sm" type="submit" title="退出登录">
+            {{ icon('logout', 'icon-sm') }}<span class="sr-only">退出登录</span>
+          </button>
+        </form>
+      {% else %}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('login') }}">登录</a>
+        <a class="btn btn-primary btn-sm" href="{{ url_for('register') }}">创建账户</a>
+      {% endif %}
+      <button class="nav-toggle" type="button" data-nav-toggle aria-controls="primary-nav" aria-expanded="false" title="打开菜单">
+        {{ icon('menu') }}<span class="sr-only">打开菜单</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="page-shell {% block main_class %}{% endblock %}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack" aria-live="polite">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}" role="status">
+            {{ icon('check' if category == 'success' else ('alert' if category == 'error' else 'file'), 'icon-sm') }}
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span>© {{ current_year }} {{ app_name }} · 本地优先，数据保存在你自己的电脑上</span>
+    <span class="footer-links">
+      <a href="https://github.com/wsrscx/cuotibu" target="_blank" rel="noreferrer">GitHub</a>
+      <a href="{{ url_for('settings') if g.user else url_for('login') }}">数据与设置</a>
+    </span>
+  </div>
+</footer>
+
+<dialog id="noteDialog" class="wide" aria-labelledby="noteDialogTitle">
+  <div class="dialog-head">
+    <div>
+      <h2 id="noteDialogTitle">错题详情</h2>
+      <p id="noteDialogMeta"></p>
+    </div>
+    <button class="dialog-close" type="button" data-close-dialog aria-label="关闭">{{ icon('close') }}</button>
+  </div>
+  <div class="dialog-body" id="noteDialogBody"></div>
+  <div class="dialog-foot">
+    <button class="btn" type="button" data-close-dialog>关闭</button>
+  </div>
+</dialog>
+
+<div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+<script src="{{ url_for('static', filename='app.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

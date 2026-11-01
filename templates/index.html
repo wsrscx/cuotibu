@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+
+{% block title %}{{ app_name }} · 把错题变成下一次的答案{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">错题簿 / 本地优先的学习档案</p>
+    <h1>把错题，<br>变成<em>下一次的答案</em>。</h1>
+    <p class="hero-copy">
+      记录错题、拆解错因、安排复习，再把薄弱点带进作业与课堂。
+      数据保存在你自己的电脑上，AI 只在需要时被调用。
+    </p>
+    <div class="hero-actions">
+      {% if g.user %}
+        <a class="btn btn-primary" href="{{ url_for('dashboard') }}">进入工作台 {{ icon('arrow-right', 'icon-sm') }}</a>
+      {% else %}
+        <a class="btn btn-primary" href="{{ url_for('register') }}">创建账户 {{ icon('arrow-right', 'icon-sm') }}</a>
+        <a class="btn" href="{{ url_for('login') }}">已有账户，登录</a>
+      {% endif %}
+    </div>
+    <div class="hero-meta">
+      <span>{{ icon('shield', 'icon-sm') }} SQLite 本地存储</span>
+      <span>{{ icon('key', 'icon-sm') }} 自备 OpenRouter 密钥</span>
+      <span>{{ icon('layers', 'icon-sm') }} 学生 / 教师双角色</span>
+    </div>
+  </div>
+
+  <aside class="ledger" aria-label="错题档案示例">
+    <div class="ledger-head">
+      <span>错题档案 / No. 001</span>
+      <span>2026. 11</span>
+    </div>
+    <p class="ledger-title">已知函数 f(x) = x² − 4x + 3，求单调区间。</p>
+    <dl>
+      <div class="ledger-row"><dt>分类</dt><dd>函数 · 单调性</dd></div>
+      <div class="ledger-row"><dt>错因</dt><dd>忘记先看定义域，配方后直接写结论</dd></div>
+      <div class="ledger-row"><dt>订正</dt><dd>f(x) = (x − 2)² − 1，对称轴 x = 2</dd></div>
+      <div class="ledger-row"><dt>复习</dt><dd>明天 08:30 · 第 2 次</dd></div>
+    </dl>
+    <span class="stamp">已订正</span>
+  </aside>
+</section>
+
+<section class="feature-grid" aria-label="主要功能">
+  <article class="feature">
+    <span class="feature-num">01 / RECORD</span>
+    <h2>留下证据，而不只是答案</h2>
+    <p>标题、原题、图片、错误过程一起保存。每道错题都有可检索的分类、标签和复习节奏。</p>
+  </article>
+  <article class="feature">
+    <span class="feature-num">02 / ANALYSE</span>
+    <h2>把「不会」拆成具体原因</h2>
+    <p>接入 OpenRouter 的模型，分析错因、给出订正步骤和改进建议。没有密钥也可以手动整理。</p>
+  </article>
+  <article class="feature">
+    <span class="feature-num">03 / REVIEW</span>
+    <h2>让复习按时发生</h2>
+    <p>按遗忘曲线安排下次复习，生成今日清单和练习。教师可以把同一套流程带进作业与批改。</p>
+  </article>
+</section>
+
+<div class="workflow" aria-label="使用流程">
+  <span><b>01</b> 拍照或粘贴</span>
+  <span class="arrow">→</span>
+  <span><b>02</b> AI 拆解</span>
+  <span class="arrow">→</span>
+  <span><b>03</b> 自动排复习</span>
+  <span class="arrow">→</span>
+  <span><b>04</b> 作业闭环</span>
+</div>
+
+<section class="cta-band">
+  <div>
+    <h2>从今天的第一道错题开始。</h2>
+    <p>不需要云端账户。注册一个本地账户，数据就在这台电脑上。</p>
+  </div>
+  {% if g.user %}
+    <a class="btn" href="{{ url_for('dashboard') }}">回到工作台</a>
+  {% else %}
+    <a class="btn" href="{{ url_for('register') }}">创建账户 {{ icon('arrow-right', 'icon-sm') }}</a>
+  {% endif %}
+</section>
+{% endblock %}

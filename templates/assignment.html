@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, empty_state, status_badge %}
+
+{% block title %}{{ assignment.title }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="面包屑">
+  <a href="{{ url_for('teacher_dashboard') }}">教师工作台</a>
+  <span>/</span>
+  <a href="{{ url_for('view_textbook', textbook_id=assignment.textbook_id) }}">{{ assignment.textbook.title }}</a>
+  <span>/</span>
+  <span>作业</span>
+</nav>
+
+<div class="page-head">
+  <div>
+    <p class="eyebrow">作业管理</p>
+    <h1>{{ assignment.title }}</h1>
+    <p class="page-sub">{{ assignment.description or '暂无描述。' }}</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('view_textbook', textbook_id=assignment.textbook_id) }}">{{ icon('arrow-left', 'icon-sm') }} 教材</a>
+    <button class="btn" type="button" data-open-dialog="generateQuestionsDialog">
+      {{ icon('scan', 'icon-sm') }} 生成题目
+    </button>
+    <button class="btn btn-primary" type="button" data-open-dialog="assignStudentsDialog" {% if not students %}disabled title="先在班级页添加学生"{% endif %}>
+      {{ icon('users', 'icon-sm') }} 分配给学生
+    </button>
+  </div>
+</div>
+
+<div class="stat-strip mb-4">
+  <div class="stat">
+    <div class="stat-label">题目</div>
+    <div class="stat-value">{{ questions|length }}<small> 道</small></div>
+    <div class="stat-note">总分 {{ assignment.total_points|num }} 分</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">已分配</div>
+    <div class="stat-value">{{ student_assignments|length }}<small> 人</small></div>
+    <div class="stat-note">来自你的班级</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">待批改</div>
+    <div class="stat-value">{{ student_assignments|selectattr('status', 'equalto', 'submitted')|list|length }}<small> 份</small></div>
+    <div class="stat-note">已提交、尚未评分</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">截止日期</div>
+    <div class="stat-value" style="font-size:1.35rem">{{ assignment.due_date.strftime('%m/%d') if assignment.due_date else '—' }}</div>
+    <div class="stat-note">{{ assignment.due_date.strftime('%Y-%m-%d') if assignment.due_date else '未设置' }}</div>
+  </div>
+</div>
+
+<div class="split-main">
+  <div class="stack">
+    <section class="card" aria-labelledby="questionsTitle">
+      <div class="card-head">
+        <div>
+          <h2 id="questionsTitle">题目</h2>
+          <p class="tiny muted">答案只在教师端显示</p>
+        </div>
+        <button class="btn btn-sm" type="button" data-open-dialog="generateQuestionsDialog">生成题目</button>
+      </div>
+      <div class="card-body">
+        {% if questions %}
+          {% for question in questions %}
+            <div class="question-block">
+              <div class="question-head">
+                <span class="question-number">{{ '%02d'|format(loop.index) }}</span>
+                <div>
+                  <div class="cluster">
+                    <span class="badge">{{ question.type_label }}</span>
+                    <span class="tiny muted">{{ question.points|num }} 分</span>
+                    {% if question.page_number %}<span class="tiny muted">第 {{ question.page_number }} 页</span>{% endif %}
+                  </div>
+                  <p class="question-content mt-1">{{ question.content }}</p>
+                </div>
+              </div>
+              {% if question.options_list %}
+                <ul class="question-options">
+                  {% for option in question.options_list %}<li>{{ option }}</li>{% endfor %}
+                </ul>
+              {% endif %}
+              <div class="answer-box">
+                <strong>参考答案</strong>{{ question.correct_answer }}
+                {% if question.explanation %}<hr class="divider" style="margin:8px 0"><strong>解析</strong>{{ question.explanation }}{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          {{ empty_state('还没有题目', '从教材页面识别文字并生成题目。', 'file') }}
+          <div class="cluster" style="justify-content:center;padding-bottom:20px">
+            <button class="btn btn-primary" type="button" data-open-dialog="generateQuestionsDialog">生成题目</button>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="submissionsTitle">
+      <div class="card-head">
+        <div>
+          <h2 id="submissionsTitle">学生提交</h2>
+          <p class="tiny muted">批改后学生可以在工作台查看成绩</p>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if student_assignments %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>学生</th><th>状态</th><th class="num">分数</th><th>提交时间</th><th></th></tr>
+              </thead>
+              <tbody>
+                {% for submission in student_assignments %}
+                  <tr>
+                    <td>{{ submission.student.username }}</td>
+                    <td>{{ status_badge(submission.status, submission.status_label) }}</td>
+                    <td class="num">{{ submission.score|num if submission.score is not none else '—' }}</td>
+                    <td class="mono tiny">{{ submission.submitted_at.strftime('%m/%d %H:%M') if submission.submitted_at else '—' }}</td>
+                    <td class="row-actions">
+                      {% if submission.status == 'submitted' %}
+                        <a class="btn btn-sm" href="{{ url_for('grade_assignment', submission_id=submission.id) }}">批改</a>
+                        {% if has_api_key %}
+                          <button class="btn btn-sm btn-ghost" type="button"
+                                  data-auto-grade="{{ url_for('auto_grade_assignment', submission_id=submission.id) }}">AI 判题</button>
+                        {% endif %}
+                      {% elif submission.status == 'graded' %}
+                        <a class="btn btn-sm btn-ghost" href="{{ url_for('grade_assignment', submission_id=submission.id) }}">查看</a>
+                      {% else %}
+                        <span class="tiny muted">等待提交</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          {{ empty_state('还没有分配', '把作业分配给学生后，提交记录会出现在这里。', 'users') }}
+        {% endif %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>作业信息</h2>
+          <p class="tiny muted">来自教材页面</p>
+        </div>
+      </div>
+      <div class="card-body stack-sm">
+        <div class="spread"><span class="small muted">教材</span><a class="small text-right" href="{{ url_for('view_textbook', textbook_id=assignment.textbook_id) }}">{{ assignment.textbook.title }}</a></div>
+        <div class="spread"><span class="small muted">创建时间</span><span class="small mono">{{ assignment.created_at.strftime('%Y-%m-%d') }}</span></div>
+        <div class="spread"><span class="small muted">总分</span><span class="small mono">{{ assignment.total_points|num }} 分</span></div>
+        <div class="spread"><span class="small muted">学生</span><span class="small mono">{{ student_assignments|length }} 人</span></div>
+        <hr class="divider">
+        <p class="tiny muted">生成题目会调用视觉模型识别教材图片，再调用文本模型出题，通常需要十几秒到一分钟。</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-body">
+        <p class="eyebrow">分配状态</p>
+        {% if students %}
+          <div class="stack-sm mt-2">
+            {% for student in students %}
+              <div class="spread">
+                <span class="small">{{ student.username }}</span>
+                {% if student.id in assigned_ids %}
+                  <span class="badge badge-green">已分配</span>
+                {% else %}
+                  <span class="badge">未分配</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="small muted mt-1">还没有学生。 <a href="{{ url_for('manage_students') }}">去班级页添加</a></p>
+        {% endif %}
+      </div>
+    </section>
+  </aside>
+</div>
+
+<dialog id="generateQuestionsDialog" class="wide" aria-labelledby="generateQuestionsTitle">
+  <form id="generateQuestionsForm" data-assignment-id="{{ assignment.id }}">
+    <div class="dialog-head">
+      <div>
+        <h2 id="generateQuestionsTitle">从教材页面生成题目</h2>
+        <p>{{ assignment.textbook.title }} · 第 {{ assignment.textbook.page_count or 1 }} 页</p>
+      </div>
+      <button class="dialog-close" type="button" data-close-dialog aria-label="关闭">{{ icon('close') }}</button>
+    </div>
+    <div class="dialog-body stack-sm">
+      <div class="form-grid">
+        <div class="field">
+          <label for="generatePage">页码</label>
+          <input class="input" id="generatePage" name="page_number" type="number" min="1" value="1" required>
+        </div>
+        <div class="field">
+          <label for="generateCount">题目数量</label>
+          <input class="input" id="generateCount" name="question_count" type="number" min="1" max="15" value="3" required>
+        </div>
+      </div>
+      <fieldset class="field" style="border:0;padding:0;margin:0">
+        <legend class="field-label">题型</legend>
+        <div class="form-grid">
+          {% for code, label in question_types %}
+            <label class="check"><input type="checkbox" name="question_types" value="{{ code }}" {% if loop.first %}checked{% endif %}> {{ label }}</label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      <div class="field">
+        <label for="generateApiKey">临时 API 密钥（可选）</label>
+        <input class="input" id="generateApiKey" name="api_key" type="password" autocomplete="off" placeholder="留空使用账户中的密钥">
+      </div>
+      <p class="tiny muted" id="generateStatus">会先识别页面文字，再生成题目。请确认教材图片清晰。</p>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" type="button" data-close-dialog>取消</button>
+      <button class="btn btn-primary" type="submit">开始生成</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="assignStudentsDialog" aria-labelledby="assignStudentsTitle">
+  <form method="post" action="{{ url_for('assign_to_students') }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+    <div class="dialog-head">
+      <div>
+        <h2 id="assignStudentsTitle">分配给学生</h2>
+        <p>只显示你班级里的学生。</p>
+      </div>
+      <button class="dialog-close" type="button" data-close-dialog aria-label="关闭">{{ icon('close') }}</button>
+    </div>
+    <div class="dialog-body">
+      {% if students %}
+        <div class="choice-list">
+          {% for student in students %}
+            <label class="choice-card">
+              <input type="checkbox" name="student_ids" value="{{ student.id }}"
+                     {% if student.id in assigned_ids %}checked disabled{% endif %}>
+              <span>
+                <strong>{{ student.username }}</strong>
+                {% if student.id in assigned_ids %}
+                  <span class="badge badge-green">已分配</span>
+                {% endif %}
+                <br><span class="field-hint">{{ student.email }}</span>
+              </span>
+            </label>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="small muted">还没有学生。请先在 <a href="{{ url_for('manage_students') }}">班级页</a> 添加学生。</p>
+      {% endif %}
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" type="button" data-close-dialog>取消</button>
+      <button class="btn btn-primary" type="submit" {% if not students %}disabled{% endif %}>分配</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

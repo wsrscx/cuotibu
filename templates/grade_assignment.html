@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, status_badge, empty_state %}
+
+{% block title %}批改 · {{ submission.assignment.title }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="面包屑">
+  <a href="{{ url_for('teacher_dashboard') }}">教师工作台</a>
+  <span>/</span>
+  <a href="{{ url_for('view_assignment', assignment_id=submission.assignment_id) }}">{{ submission.assignment.title }}</a>
+  <span>/</span>
+  <span>批改</span>
+</nav>
+
+<div class="page-head">
+  <div>
+    <p class="eyebrow">批改 / {{ submission.student.username }}</p>
+    <h1>{{ submission.assignment.title }}</h1>
+    <p class="page-sub">
+      {{ status_badge(submission.status, submission.status_label) }}
+      <span class="mono"> · 提交于 {{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') if submission.submitted_at else '未提交' }}</span>
+    </p>
+  </div>
+  <div class="actions">
+    {% if submission.status == 'submitted' %}
+      <button class="btn" type="button" data-auto-grade="{{ url_for('auto_grade_assignment', submission_id=submission.id) }}">
+        {{ icon('scan', 'icon-sm') }} AI 自动判题
+      </button>
+    {% endif %}
+    <a class="btn" href="{{ url_for('view_assignment', assignment_id=submission.assignment_id) }}">{{ icon('arrow-left', 'icon-sm') }} 返回作业</a>
+  </div>
+</div>
+
+<div class="stat-strip mb-4">
+  <div class="stat">
+    <div class="stat-label">学生</div>
+    <div class="stat-value" style="font-size:1.35rem">{{ submission.student.username }}</div>
+    <div class="stat-note">{{ submission.student.email }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">题目</div>
+    <div class="stat-value">{{ questions|length }}<small> 道</small></div>
+    <div class="stat-note">总分 {{ submission.assignment.total_points|num }} 分</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">当前得分</div>
+    <div class="stat-value">{{ submission.score|num if submission.score is not none else '—' }}<small> 分</small></div>
+    <div class="stat-note">保存后更新</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">批量得分</div>
+    <div class="stat-value" style="font-size:1.35rem" id="gradeTotal">—</div>
+    <div class="stat-note">按每题得分实时计算</div>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('submit_grades') }}" id="gradingForm">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="submission_id" value="{{ submission.id }}">
+
+  <section class="card mb-4">
+    <div class="card-head">
+      <div>
+        <h2>学生作答</h2>
+        <p class="tiny muted">给每题打分，并标记是否正确。未勾选的题目会被收进学生的错题本。</p>
+      </div>
+      <span class="tiny muted">{{ questions|length }} 道</span>
+    </div>
+    <div class="card-body">
+      {% if questions %}
+        {% for question in questions %}
+          {% set answer = answers_map.get(question.id) %}
+          <div class="question-block">
+            <div class="question-head">
+              <span class="question-number">{{ '%02d'|format(loop.index) }}</span>
+              <div style="flex:1">
+                <div class="cluster">
+                  <span class="badge">{{ question.type_label }}</span>
+                  <span class="tiny muted">{{ question.points|num }} 分</span>
+                </div>
+                <p class="question-content mt-1">{{ question.content }}</p>
+                {% if question.options_list %}
+                  <ul class="question-options">
+                    {% for option in question.options_list %}<li>{{ option }}</li>{% endfor %}
+                  </ul>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="answer-box">
+              <strong>学生答案</strong>{{ answer.answer_content if answer and answer.answer_content else '（未作答）' }}
+            </div>
+            <div class="answer-box">
+              <strong>参考答案</strong>{{ question.correct_answer }}
+              {% if question.explanation %}<hr class="divider" style="margin:8px 0"><strong>解析</strong>{{ question.explanation }}{% endif %}
+            </div>
+
+            <div class="grade-grid mt-2" style="margin-left:38px">
+              <div class="field">
+                <label class="field-label" for="feedback_{{ question.id }}">本题反馈</label>
+                <textarea class="textarea" id="feedback_{{ question.id }}" name="feedback_{{ question.id }}" rows="2"
+                          placeholder="可选：指出具体问题">{{ answer.feedback if answer and answer.feedback else '' }}</textarea>
+              </div>
+              <div class="field">
+                <label class="field-label" for="score_{{ question.id }}">得分</label>
+                <input class="input grade-score" id="score_{{ question.id }}" name="score_{{ question.id }}" type="number"
+                       min="0" max="{{ question.points|num }}" step="0.5"
+                       value="{{ answer.score if answer and answer.score is not none else '' }}"
+                       data-score-input>
+              </div>
+              <div class="field">
+                <span class="field-label">正确</span>
+                <label class="check" style="padding-top:8px">
+                  <input type="checkbox" name="is_correct_{{ question.id }}"
+                         {% if answer and answer.is_correct %}checked{% endif %}>
+                  标记为正确
+                </label>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        {{ empty_state('这份作业没有题目', '回到作业页生成题目后，学生才能作答。', 'file') }}
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-head">
+      <div>
+        <h2>总体反馈</h2>
+        <p class="tiny muted">会显示在学生的成绩页面。</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label class="field-label" for="overallFeedback">评语</label>
+        <textarea class="textarea" id="overallFeedback" name="feedback" rows="4"
+                  placeholder="这次作业的整体表现、需要继续练习的地方…">{{ submission.feedback or '' }}</textarea>
+      </div>
+    </div>
+  </section>
+
+  <div class="actions" style="justify-content:flex-end">
+    <a class="btn" href="{{ url_for('view_assignment', assignment_id=submission.assignment_id) }}">取消</a>
+    <button class="btn btn-primary" type="submit" {% if not questions %}disabled{% endif %}>保存批改结果</button>
+  </div>
+</form>
+{% endblock %}
