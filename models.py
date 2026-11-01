@@ -31,6 +31,7 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(10), nullable=False, default="student", index=True)
     openrouter_api_key = db.Column(db.String(255), nullable=True)
+    session_version = db.Column(db.Integer, default=0, nullable=False)
     teacher_id = db.Column(
         db.Integer,
         db.ForeignKey("user.id", ondelete="SET NULL"),

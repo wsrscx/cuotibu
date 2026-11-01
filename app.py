@@ -242,7 +242,7 @@ def load_user():
     user_id = session.get("user_id")
     if user_id:
         user = db.session.get(User, user_id)
-        if user is None:
+        if user is None or session.get("sv", 0) != (user.session_version or 0):
             session.clear()
         else:
             g.user = user
@@ -838,6 +838,7 @@ def login():
             _clear_login_failures(key)
             session.clear()
             session["user_id"] = user.id
+            session["sv"] = user.session_version or 0
             session["_csrf"] = secrets.token_urlsafe(32)
             session.permanent = True
             flash(f"欢迎回来，{user.username}。", "success")
@@ -874,8 +875,11 @@ def settings():
                 flash("两次输入的新密码不一致。", "error")
             else:
                 g.user.password = generate_password_hash(new_password)
+                g.user.session_version = (g.user.session_version or 0) + 1
                 db.session.commit()
-                flash("密码已更新。", "success")
+                # Keep this browser signed in; other sessions become invalid.
+                session["sv"] = g.user.session_version
+                flash("密码已更新，其他登录会话已失效。", "success")
         else:
             new_key = (request.form.get("openrouter_api_key") or "").strip()
             if request.form.get("clear_api_key"):
